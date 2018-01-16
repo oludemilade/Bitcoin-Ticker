@@ -7,11 +7,13 @@
 //
 
 import UIKit
+import Alamofire
+import SwiftyJSON
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDelegate {
     
     let baseURL = "https://apiv2.bitcoinaverage.com/indices/global/ticker/BTC"
-    let currencyArray = ["AUD", "BRL","CAD","CNY","EUR","GBP","HKD","IDR","ILS","INR","JPY","MXN","NOK","NZD","PLN","RON","RUB","SEK","SGD","USD","ZAR"]
+    let currencyArray = ["AUD", "BRL","CAD","CNY","EUR","GBP","HKD","IDR","ILS","INR","JPY","MXN","NGN", "NOK","NZD","PLN","RON","RUB","SEK","SGD","USD","ZAR"]
     var finalURL = ""
 
     //Pre-setup IBOutlets
@@ -22,64 +24,105 @@ class ViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-       
+        currencyPicker.delegate = self
+        currencyPicker.dataSource = self
     }
 
     
     //TODO: Place your 3 UIPickerView delegate methods here
     
+    //Determine how many columns we want
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        return 1
+    }
+    
+    // How many rows this picker should be using the picker view
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        return currencyArray.count
+    }
+    
+    // Use the string from currency array as title
+    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+        return currencyArray[row]
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        
+        var currencySymbol : String = ""
+        if currencyArray[row] == "AUD" || currencyArray[row] == "CAD" || currencyArray[row] == "HKD" || currencyArray[row] == "NZD" || currencyArray[row] == "SGD" || currencyArray[row] == "USD" || currencyArray[row] == "MXN" {
+            currencySymbol.append("$")
+        } else if currencyArray[row] == "BRL" {
+            currencySymbol.append("R$")
+        } else if currencyArray[row] == "CNY" {
+            currencySymbol.append("¥")
+        } else if currencyArray[row] == "GBP" {
+            currencySymbol.append("£")
+        } else if currencyArray[row] == "EUR" {
+            currencySymbol.append("€")
+        } else if currencyArray[row] == "IDR" {
+            currencySymbol.append("Rp")
+        } else if currencyArray[row] == "ILS" {
+            currencySymbol.append("₪")
+        } else if currencyArray[row] == "INR" {
+            currencySymbol.append("₹")
+        } else if currencyArray[row] == "JPY" {
+            currencySymbol.append("¥")
+        } else if currencyArray[row] == "NGN" {
+            currencySymbol.append("₦")
+        } else if currencyArray[row] == "NOK" || currencyArray[row] == "SEK" {
+            currencySymbol.append("kr")
+        } else if currencyArray[row] == "PLN" {
+            currencySymbol.append("zł")
+        } else if currencyArray[row] == "RON" {
+            currencySymbol.append("lei")
+        } else if currencyArray[row] == "RUB" {
+            currencySymbol.append("₽")
+        } else if currencyArray[row] == "ZAR" {
+            currencySymbol.append("R")
+        }
+        
+        finalURL = baseURL + currencyArray[row]
+        print(finalURL)
+        getBitcoinData(url: finalURL, currencySymbol: currencySymbol)
+    }
     
     
+    //MARK: - Networking
+    /***************************************************************/
+    
+    func getBitcoinData(url: String, currencySymbol : String) {
+        
+        Alamofire.request(url, method: .get)
+            .responseJSON { response in
+                if response.result.isSuccess {
 
-    
-    
-    
-//    
-//    //MARK: - Networking
-//    /***************************************************************/
-//    
-//    func getWeatherData(url: String, parameters: [String : String]) {
-//        
-//        Alamofire.request(url, method: .get, parameters: parameters)
-//            .responseJSON { response in
-//                if response.result.isSuccess {
+                    print("Sucess! Got the Bitcoin data")
+                    let BitcoinJSON : JSON = JSON(response.result.value!)
+                    print(BitcoinJSON)
+                    self.updateBitcoinData(json: BitcoinJSON, currencySymbol : currencySymbol)
+
+                } else {
+                    print("Error: \(String(describing: response.result.error))")
+                    self.bitcoinPriceLabel.text = "Connection Issues"
+                }
+            }
+    }
+
 //
-//                    print("Sucess! Got the weather data")
-//                    let weatherJSON : JSON = JSON(response.result.value!)
-//
-//                    self.updateWeatherData(json: weatherJSON)
-//
-//                } else {
-//                    print("Error: \(String(describing: response.result.error))")
-//                    self.bitcoinPriceLabel.text = "Connection Issues"
-//                }
-//            }
-//
-//    }
-//
-//    
 //    
 //    
 //    
 //    //MARK: - JSON Parsing
 //    /***************************************************************/
 //    
-//    func updateWeatherData(json : JSON) {
-//        
-//        if let tempResult = json["main"]["temp"].double {
-//        
-//        weatherData.temperature = Int(round(tempResult!) - 273.15)
-//        weatherData.city = json["name"].stringValue
-//        weatherData.condition = json["weather"][0]["id"].intValue
-//        weatherData.weatherIconName =    weatherData.updateWeatherIcon(condition: weatherData.condition)
-//        }
-//        
-//        updateUIWithWeatherData()
-//    }
-//    
-
-
-
+    func updateBitcoinData(json : JSON, currencySymbol : String) {
+        if let tempResult = json["ask"].double {
+            bitcoinPriceLabel.text = currencySymbol + " " + String(tempResult)
+        } else {
+           bitcoinPriceLabel.text = "Bitcoin Data Unavailable"
+        }
+        
+    }
 
 }
 
